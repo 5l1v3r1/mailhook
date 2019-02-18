@@ -17,7 +17,7 @@ invalid_reg     = compile(escape(INVALID_STRING))
 DEFAULT_SLEEP_TIME          = 45
 DEFAULT_BLOCKED_SLEEP_TIME  = 60*20
 
-def check_email(email,verbose=True):
+def check_email(email):
     '''
     Use mailtester.com to check if a given email address is valid. Will
     perform an extended sleep should a block detection occur.
@@ -37,9 +37,9 @@ def check_email(email,verbose=True):
 
     if resp and search(valid_reg, resp.text):
         known_valid = email
-        outcome = True
+        return True
     else:
-        outcome = False
+        return False
 
 def blocked_loop(email):
     '''
@@ -104,7 +104,7 @@ if __name__ == '__main__':
         help='Output file to receive records')
     parser.add_argument('--print-invalid','-pi',action='store_true',
         help='Determine if invalid emails should be printed to stdout')
-    parser.add_argument('--sleep-time','-s',default=45,
+    parser.add_argument('--sleep-time','-s',default=5,
         help='Length of time to sleep between requests '\
             f'in seconds. (Default: {DEFAULT_SLEEP_TIME})')
     parser.add_argument('--blocked-sleep-time','-b',default=60*20,
@@ -150,7 +150,11 @@ if __name__ == '__main__':
                 if not known_valid and esplit[0] == 'valid':
                     known_valid = esplit[1]
                     print(f'[+] A valid email was found: {known_valid}')
-
+                    if check_email(known_valid):
+                        print(f'[+] Email still valid: {last_email}')
+                    else:
+                        print(f'[+] Email is now invalid: {last_email}')
+                        known_valid = None
 
         if last_email:
             print(f'[+] Last email tested: {last_email}')
@@ -195,50 +199,76 @@ if __name__ == '__main__':
         # ===========================================
         # BEGIN ITERATING OVER TARGET EMAIL ADDRESSES
         # ===========================================
-
+        break_email = None
+        do_break = False
         with open(args.input_file) as infile:
 
-            for email in infile:
+            try:
 
-                email = email.strip()
-
-                # =======================================
-                # CONTINUE LOOPING UNTIL RESUMPTION EMAIL
-                # =======================================
-
-                if not resumed and (last_email == email):
-                    resumed = True
-                    continue        # AVOID RECHECK OF EMAIL
-                elif not resumed:   # CONTINUE UNTIL RESUME FLAG
-                    continue
+                for email in infile:
                 
-                # =======================
-                # CHECK THE EMAIL ADDRESS
-                # =======================
+                    if do_break: break
+    
+                    if break_email:
+                        check_email(break_email)
+                        break_email = None
+                        sleep(args.sleep_time)
 
-                outcome = check_email(email)
+                    email = email.strip()
+    
+                    # =======================================
+                    # CONTINUE LOOPING UNTIL RESUMPTION EMAIL
+                    # =======================================
+    
+                    if not resumed and (last_email == email):
+                        resumed = True
+                        continue        # AVOID RECHECK OF EMAIL
+                    elif not resumed:   # CONTINUE UNTIL RESUME FLAG
+                        continue
+                    
+                    # =======================
+                    # CHECK THE EMAIL ADDRESS
+                    # =======================
+    
+                    outcome = check_email(email)
+    
+                    if outcome:
+                        print(f'valid: {email}')
+                    elif args.print_invalid:
+                        print(f'invalid: {email}')
 
-                if outcome:
-                    print(f'valid: {email}')
-                elif args.print_invalid:
-                    print(f'invalid: {email}')
+                    if not outcome and known_valid:
+                        check_email(known_valid)
+    
+                    # ===========
+                    # OUTPUT LOGS
+                    # ===========
+    
+                    if outfile:
+    
+                        if outcome: outfile.write('valid:'+email+'\n')
+                        else: outfile.write('invalid:'+email+'\n')
+    
+                        outfile.flush()
+    
+                    # =============================
+                    # SLEEP FOR SOME PERIOD OF TIME
+                    # =============================
+    
+                    sleep(args.sleep_time)
 
-                # ===========
-                # OUTPUT LOGS
-                # ===========
-
-                if outfile:
-
-                    if outcome: outfile.write('valid:'+email+'\n')
-                    else: outfile.write('invalid:'+email+'\n')
-
-                    outfile.flush()
-
-                # =============================
-                # SLEEP FOR SOME PERIOD OF TIME
-                # =============================
-
-                sleep(args.sleep_time)
+            except KeyboardInterrupt as e:
+    
+                print('[!] Keyboard interrupt caught')
+    
+                i = None
+                while i != 'y' and i !='n':
+                    i = input('Cancel the scan?(y/n):')
+                    if i == 'y':
+                        do_break = True
+                    elif i == 'n':
+                        break_email = email
+                        do_break = False
 
     # =====================
     # CLOSE THE OUTPUT FILE
