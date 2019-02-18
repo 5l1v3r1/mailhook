@@ -24,9 +24,9 @@ def check_email(email):
 
 def check_and_print(email):
         
-    print(f'[+] Checking Email ({args.email_address}): ', end='')
+    print(f'[+] Checking Email ({email}): ', end='')
 
-    if check_email(args.email_address):
+    if check_email(email):
         print('Valid')
         return 1
     else:
@@ -46,8 +46,18 @@ if __name__ == '__main__':
     mexc.add_argument('--input-file','-i',
         help='File containing newline delimited email addresses',
     )
+    parser.add_argument('--output-file','-o',
+        help='Output file to receive records'
+    )
+    parser.add_argument('--sleep-time','-s',default=30,
+        help='Length of time to sleep between requests (seconds)')
 
     args = parser.parse_args()
+
+    if args.output_file:
+        outfile = open(args.output_file,'w')
+    else:
+        outfile = None
 
     if args.email_address: check_and_print(args.email_address)
     elif args.input_file:
@@ -60,10 +70,19 @@ if __name__ == '__main__':
 
         with open(args.input_file) as infile:
 
+            email = email.strip()
             for email in infile:
+                outcome = check_and_print(email.strip())
 
-                outcome = check_and_print(email)
+                if outfile:
+                    if outcome: outfile.write('valid:'+email)
+                    else: outfile.write('invalid:'+email)
+
+                sleep(args.sleep_time)
     else:
         print('[+] Something screwy happened.')
+
+    if outfile:
+        outfile.close()
 
     print('\nExiting\n')
