@@ -70,8 +70,8 @@ if __name__ == '__main__':
 
         with open(args.input_file) as infile:
 
-            email = email.strip()
             for email in infile:
+                email = email.strip()
                 outcome = check_and_print(email.strip())
 
                 if outfile:
