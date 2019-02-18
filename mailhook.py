@@ -16,7 +16,7 @@ blocked_reg                 = compile(escape(BLOCKED_STRING))
 invalid_reg                 = compile(escape(INVALID_STRING))
 disallowed_reg              = compile(escape(SERVER_DISALLOWED_STRING))
 
-DEFAULT_SLEEP_TIME          = 40
+DEFAULT_SLEEP_TIME          = 60
 DEFAULT_BLOCKED_SLEEP_TIME  = 60*30
 
 def check_email(email):
@@ -97,9 +97,9 @@ if __name__ == '__main__':
 
     print('\nStarting the script...\n')
 
-    # ========================
-    # BUILD THE DAMN INTERFACE
-    # ========================
+    # ===================
+    # BUILD THE INTERFACE
+    # ===================
 
     parser = argparse.ArgumentParser(
         description='Test some emails against mailtester.com'
