@@ -3,7 +3,7 @@ from pathlib import Path
 from requests import post
 from re import escape,compile,search
 from sys import exit
-
+from time import sleep
 
 VALID_STRING    = 'E-mail address is valid'
 INVALID_STRING  = 'E-mail address does not exist on this server'
