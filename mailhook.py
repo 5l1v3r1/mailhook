@@ -2,20 +2,22 @@ import argparse
 from pathlib import Path
 from requests import post
 from re import escape,compile,search
-from sys import exit
 from time import sleep
+from sys import exit
 
-VALID_STRING    = 'E-mail address is valid'
-INVALID_STRING  = 'E-mail address does not exist on this server'
-BLOCKED_STRING  = 'Too many invalid recipients'
-URL             = 'http://mailtester.com/testmail.php'
+VALID_STRING                = 'E-mail address is valid'
+INVALID_STRING              = 'E-mail address does not exist on this server'
+BLOCKED_STRING              = 'Too many invalid recipients'
+SERVER_DISALLOWED_STRING    = 'Server doesn\'t allow e-mail address verification'
+URL                         = 'http://mailtester.com/testmail.php'
 
-valid_reg       = compile(escape(VALID_STRING)) 
-blocked_reg     = compile(escape(BLOCKED_STRING))
-invalid_reg     = compile(escape(INVALID_STRING))
+valid_reg                   = compile(escape(VALID_STRING)) 
+blocked_reg                 = compile(escape(BLOCKED_STRING))
+invalid_reg                 = compile(escape(INVALID_STRING))
+disallowed_reg              = compile(escape(SERVER_DISALLOWED_STRING))
 
-DEFAULT_SLEEP_TIME          = 45
-DEFAULT_BLOCKED_SLEEP_TIME  = 60*20
+DEFAULT_SLEEP_TIME          = 40
+DEFAULT_BLOCKED_SLEEP_TIME  = 60*30
 
 def check_email(email):
     '''
@@ -28,7 +30,11 @@ def check_email(email):
     # ====================================
 
     resp = make_request(email)
-    if search(blocked_reg, resp.text):
+    if search(disallowed_reg,resp.text):
+        print('Upstream server doesn\'t allow verification!')
+        print('Exiting')
+        exit()
+    elif search(blocked_reg, resp.text):
         resp = blocked_loop(email)
 
     # ==============
@@ -79,6 +85,9 @@ def blocked_loop(email):
     return resp
 
 def make_request(email):
+    '''
+    Make the request and return the response object.
+    '''
 
     return post(
         URL,data={'lang':'en','email':email}
@@ -104,10 +113,11 @@ if __name__ == '__main__':
         help='Output file to receive records')
     parser.add_argument('--print-invalid','-pi',action='store_true',
         help='Determine if invalid emails should be printed to stdout')
-    parser.add_argument('--sleep-time','-s',default=5,
+    parser.add_argument('--sleep-time','-s',default=DEFAULT_SLEEP_TIME,
         help='Length of time to sleep between requests '\
             f'in seconds. (Default: {DEFAULT_SLEEP_TIME})')
-    parser.add_argument('--blocked-sleep-time','-b',default=60*20,
+    parser.add_argument('--blocked-sleep-time','-b',
+        default=DEFAULT_BLOCKED_SLEEP_TIME,
         help='Length of time to sleep after being blocked by the server '\
             f'in seconds. (Default: {DEFAULT_BLOCKED_SLEEP_TIME})')
     parser.add_argument('--resume-log','-r',
